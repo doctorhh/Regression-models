@@ -1,0 +1,5 @@
+trans_aut <- mtcars %>% filter(am==0)
+# trans_aut <- mtcars %>% filter(am==0) %>% select(mpg)
+# subset(mtcars, am==0)
+trans_man <- mtcars %>% filter(am==1)
+# subset(mtcars, am==1)
