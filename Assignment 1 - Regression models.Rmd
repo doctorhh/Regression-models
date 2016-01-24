@@ -1,0 +1,137 @@
+---
+title: "Regression Models - Assignment"
+author: "H.Harvey"
+date: "24 January 2016"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## Executive summary
+In this report, we analyze the (mtcars)  data set and explore the relationship between a set of variables and miles per gallon (MPG). We use exploratory data analysis and regression models to explore how automatic (am = 0) and manual (am = 1) transmissions features affect the MPG feature and answer the following question:
+
+      Q1-"Is an automatic or manual transmission better for MPG"
+      Q2-"Quantify the MPG difference between automatic and manual transmissions"
+
+A t-test shows that a difference in performance exist between automatic and manual transmission cars in favor of the manual transmission. A linear regression model suggested that manual transmission (am=1) improves the MPG value once other variables are controlled. However, adding an interaction between terms suggested that the improvement in MPG is dependent on the weight (wt) of the car and the 1/4 mile time(qsec) with its transmission type.
+
+
+**Completer exploratory, data analysis, nested models and other instruction in Appendix.**
+
+```{r, echo=FALSE, message=FALSE}
+library(ggplot2)
+library(dplyr)
+library(glmulti) # Package must be installed first
+library(broom) # Pacakge must be installed first
+attach(mtcars)
+```
+## Manual Modeling (Automated regression model validation in Appendix)
+In order to explore the relationship between MPG and all other variables, a linear model was generated to identify the most influencial predictor. The weight (wt), horse power (hp), 1/4 mile time (qsec) and the  transmission type (am) were selected based on their lower p-value. To complement the model, the cylinder (cyl) was included on this nested model for additional validation. (models in Appendix)
+```{r}
+# Initial model including all variables & further nested model
+fit_0 <- lm(mpg ~.,data=mtcars)
+```
+```{r, echo=FALSE}
+fit_1 <- update(fit_0, mpg ~ wt, data = mtcars)
+fit_2 <- update(fit_1, mpg ~ wt + qsec , data = mtcars)
+fit_3 <- update(fit_2, mpg ~ wt + qsec + hp , data = mtcars)
+fit_4 <- update(fit_3, mpg ~ wt + qsec + hp + factor(am), data = mtcars)
+fit_5 <- update(fit_4, mpg ~ wt + qsec + hp + factor(am) + factor(cyl), data = mtcars)
+fit_6 <- lm(mpg ~ wt + qsec + factor(am), data = mtcars)
+fit_7 <- lm(formula = mpg ~ wt + qsec + factor(am) + wt:factor(am) , data = mtcars)
+fit_8 <- lm(formula = mpg ~ wt + qsec + factor(am) + qsec:factor(am) , data = mtcars)
+fit_9 <- lm(formula = mpg ~ wt + qsec + factor(am) + wt:factor(am) + qsec:factor(am) , data = mtcars)
+anova_model <- anova(fit_1,fit_2,fit_3,fit_4,fit_5)
+```
+```{r}
+# anova_model <- anova(fit_1,fit_2,fit_3,fit_4,fit_5)
+tidy(anova_model)
+```
+The nested model demonstrates that the inclusion of the (hp) (model 3) and (cyl) model (5) predictor doesn't improve the model. Hence, the final model includes (wt), (qsec) and (am). At equal weight and acceleration time, manual transmission seems to have a higher MPG.
+
+
+
+
+```{r}
+# fit_6 <- lm(mpg ~ wt + qsec + factor(am), data = mtcars)
+tidy(fit_6) 
+```
+The coeff. for manual (am=1) indicates an increase of 2.936 MPG above of the automatic coeff. (9.618) with weight and the 1/4 mile time held constant. The model also suggests that an increase of 1T pounds in weight (wt) leads to a 3.917 reduction in MPG, while a slower acceleration time of 1 second (qsec) increases MPG by 1.226.
+
+A permutation of interaction between predictor (made possible due to the limited numbers of predictor(3)) of the final model shows that there is an interaction between the type of transmission and the wt, which is leading to a better predicting model.(models in Appendix)
+
+```{r}
+# fit_7 <- lm(formula = mpg ~ wt + qsec + factor(am) + wt:factor(am) , data = mtcars)
+summary(fit_7) 
+```
+
+## Conclusion
+We can infer that light manual transmission cars listed in the mtcars dataset shows a slightly better MPG than automatic transmission car. However, we cannot conclude that manual transmission cars have better MPG in general. In fact, the interaction between (wt) and the transmission type (am) suggest that the MPG gain in changing from automatic to manual would decreases (-4.141 above automatic coeff. -2.937) when the weight (wt) increase. Therefore, we could predict that light cars with a slow acceleration time would have better MPG.
+
+Even thought the glmulti (automated modeling pck) produced a better model, the author decided to maintain the (fit_7) model for ease of explanation/understanding.
+
+
+
+## Appendix
+The package glmulti and broom must be installed first
+Exploratory data analysis
+
+```{r}
+#Mean and SD can be calculated for each model Automatic and Manual
+model_mean_sd <- mtcars %>% select(am,mpg) %>% group_by(am) %>% summarise(mean(mpg),sd(mpg))
+model_mean_sd
+```
+H0: Automatique & Manual mpg are = 0
+H1: Automatique & Manual mpg are difference <> 0
+```{r}
+trans_aut <- mtcars %>% filter(am==0) %>% select(mpg)
+trans_man <- mtcars %>% filter(am==1) %>% select(mpg)
+```
+```{r}
+t.test(trans_aut,trans_man, alternative = 'two.sided')$p.value
+```
+We observe that manual transmission has a mean of 24.39 +/- 6.17 MPG while Automatic has a mean of 17.4 +/- 3.83 MPG. Where 0 = automatic and 1 = manual. Since the p-value is 0.00137, we reject our null hypothesis, which indicate that the automatic and manual transmissions are from different group.
+```{r}
+par(mfrow = c(1,2))
+hist(mpg) #Normality of data
+boxplot(mpg~am, names = c("Automatic", "Manual"),ylab="MPG", main="Boxplot of MPG transmission type") 
+```
+# Residual
+```{r}
+par(mfrow = c(2,2))
+plot(fit_7)
+```
+We can observe that there seems to be a few outliers that are skewing the data.
+## Automated Modeling
+The utilisation of the glmulti package (automated modeling package) allowed to validate the above manual process. We first modeled the complete set of predictor without interaction between the predictor to keep the model simple. The number of models have been limited to 1024 (10exp2). This saves CPU time.
+
+**fit_auto <- glmulti(mpg ~ cyl + disp + hp + drat + wt + qsec + vs + am + gear + carb, fitfunction = lm, level = 1, method = "h", confsetsize = 1024, report = FALSE, plotty = FALSE)**
+```{r,echo=FALSE,cache=TRUE}
+fit_auto <- glmulti(mpg ~ cyl + disp + hp + drat + wt + qsec + vs + am + gear + carb, fitfunction = lm, level = 1, method = "h", confsetsize = 1024, report = FALSE, plotty = FALSE)
+```
+```{r}
+summary(fit_auto@objects[[1]])
+```
+This result support the initial linear model.
+
+# Automated Modeling (interaction discovery)
+With the selected predictor (wt),(am),(qsec), a complete interaction model was generated. Level=2 is the exhaustive method where all permutation are calcultated.
+
+**fit_auto_final <- glmulti(mpg ~ am + wt + qsec , fitfunction = lm, level = 2, method = "h", report = FALSE, plotty = FALSE)**
+```{r,echo=FALSE,cache=TRUE}
+fit_auto_final <- glmulti(mpg ~ am + wt + qsec , fitfunction = lm, level = 2, method = "h", report = FALSE, plotty = FALSE)
+```
+```{r}
+summary(fit_auto_final@objects[[1]])
+```
+Nested Model:
+
+- fit_1 <- update(fit_0, mpg ~ wt, data = mtcars)
+- fit_2 <- update(fit_1, mpg ~ wt + qsec , data = mtcars)
+- fit_3 <- update(fit_2, mpg ~ wt + qsec + hp , data = mtcars)
+- fit_4 <- update(fit_3, mpg ~ wt + qsec + hp + factor(am), data = mtcars)
+- fit_5 <- update(fit_4, mpg ~ wt + qsec + hp + factor(am) + factor(cyl), data = mtcars)
+- fit_7 <- lm(formula = mpg ~ wt + qsec + factor(am) + wt:factor(am) , data = mtcars)
+- fit_8 <- lm(formula = mpg ~ wt + qsec + factor(am) + qsec:factor(am) , data = mtcars)
+- fit_9 <- lm(formula = mpg ~ wt + qsec + factor(am) + wt:factor(am) + qsec:factor(am) , data = mtcars)
