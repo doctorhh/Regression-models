@@ -93,9 +93,7 @@ t.test(trans_aut,trans_man, alternative = 'two.sided')$p.value
 ```
 We observe that manual transmission has a mean of 24.39 +/- 6.17 MPG while Automatic has a mean of 17.4 +/- 3.83 MPG. Where 0 = automatic and 1 = manual. Since the p-value is 0.00137, we reject our null hypothesis, which indicate that the automatic and manual transmissions are from different group.
 ```{r}
-par(mfrow = c(1,2))
-hist(mpg) #Normality of data
-boxplot(mpg~am, names = c("Automatic", "Manual"),ylab="MPG", main="Boxplot of MPG transmission type") 
+par(mfrow = c(1,2)); hist(mpg); boxplot(mpg~am, names = c("Automatic", "Manual"),ylab="MPG", main="Boxplot of MPG transmission type") 
 ```
 # Residual
 ```{r}
@@ -103,6 +101,7 @@ par(mfrow = c(2,2))
 plot(fit_7)
 ```
 We can observe that there seems to be a few outliers that are skewing the data.
+
 ## Automated Modeling
 The utilisation of the glmulti package (automated modeling package) allowed to validate the above manual process. We first modeled the complete set of predictor without interaction between the predictor to keep the model simple. The number of models have been limited to 1024 (10exp2). This saves CPU time.
 
@@ -125,7 +124,6 @@ fit_auto_final <- glmulti(mpg ~ am + wt + qsec , fitfunction = lm, level = 2, me
 ```{r}
 summary(fit_auto_final@objects[[1]])
 ```
-Nested Model:
 
 - fit_1 <- update(fit_0, mpg ~ wt, data = mtcars)
 - fit_2 <- update(fit_1, mpg ~ wt + qsec , data = mtcars)
